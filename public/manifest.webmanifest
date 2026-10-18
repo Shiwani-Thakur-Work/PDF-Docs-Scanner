@@ -1,0 +1,19 @@
+{
+  "name": "ApexDoc Scanner",
+  "short_name": "ApexDoc",
+  "description": "Minimal Apple-aesthetic mobile document scanner & PDF generator. 100% private and offline capable.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "./favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["utilities", "productivity", "business"]
+}

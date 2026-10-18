@@ -1,0 +1,145 @@
+/**
+ * crop.css
+ * 
+ * Apple-Style Interactive 4-Corner Document Quad & Magnifying Loupe.
+ */
+
+.crop-editor-container {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  background-color: #000000;
+  touch-action: none;
+  animation: fadeIn 0.25s var(--ease-apple-spring);
+}
+
+.crop-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(var(--safe-top) + 12px) 16px 12px 16px;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-bottom: 0.5px solid var(--glass-border);
+  z-index: 10;
+}
+
+.crop-bar-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.btn-text {
+  background: none;
+  border: none;
+  color: var(--color-accent);
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  transition: opacity var(--transition-fast);
+}
+
+.btn-text:active {
+  opacity: 0.6;
+}
+
+.btn-text.bold {
+  font-weight: 600;
+}
+
+.btn-text.cancel {
+  color: var(--text-secondary);
+}
+
+/* Crop Canvas Interactive Area */
+.crop-canvas-area {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 16px;
+}
+
+.crop-canvas-area canvas {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* Apple Magnifying Loupe (Floating above touch target) */
+.magnifying-loupe {
+  position: absolute;
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  border: 3px solid #ffffff;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 100;
+  transform: translate(-50%, -100%);
+  margin-top: -24px;
+  display: none;
+  background: #000;
+}
+
+.magnifying-loupe.visible {
+  display: block;
+}
+
+.loupe-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Reticle Crosshair inside Loupe */
+.loupe-reticle {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.loupe-reticle::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(0, 122, 255, 0.85);
+  box-shadow: 0 0 2px rgba(255, 255, 255, 0.8);
+}
+
+.loupe-reticle::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(0, 122, 255, 0.85);
+  box-shadow: 0 0 2px rgba(255, 255, 255, 0.8);
+}
+
+.loupe-center-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  border: 1px solid #ffffff;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 4px rgba(0, 122, 255, 0.8);
+}

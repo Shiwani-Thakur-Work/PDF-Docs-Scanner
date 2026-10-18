@@ -1,0 +1,18 @@
+{
+  "name": "apexdoc-scanner",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Minimal Apple-aesthetic mobile-first client-side document scanner & PDF generator",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "jspdf": "^2.5.2"
+  },
+  "devDependencies": {
+    "vite": "^6.2.0"
+  }
+}

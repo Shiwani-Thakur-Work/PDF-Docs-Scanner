@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background Apple Squircle Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1c1c1e" />
+      <stop offset="50%" stop-color="#0c0c0e" />
+      <stop offset="100%" stop-color="#000000" />
+    </linearGradient>
+
+    <!-- Glowing Paper Gradient -->
+    <linearGradient id="paperGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#e5e5ea" />
+    </linearGradient>
+
+    <!-- Laser Scanner Beam Gradient -->
+    <linearGradient id="beamGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#007aff" stop-opacity="0" />
+      <stop offset="25%" stop-color="#007aff" stop-opacity="0.85" />
+      <stop offset="50%" stop-color="#5ac8fa" stop-opacity="1" />
+      <stop offset="75%" stop-color="#007aff" stop-opacity="0.85" />
+      <stop offset="100%" stop-color="#007aff" stop-opacity="0" />
+    </linearGradient>
+
+    <!-- Glow Filter -->
+    <filter id="laserGlow" x="-20%" y="-50%" width="140%" height="200%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <!-- Shadow Filter -->
+    <filter id="softShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#000000" flood-opacity="0.5" />
+    </filter>
+  </defs>
+
+  <!-- iOS App Icon Squircle Background -->
+  <rect x="16" y="16" width="480" height="480" rx="108" ry="108" fill="url(#bgGrad)" stroke="#2c2c2e" stroke-width="3" />
+
+  <!-- Document Sheet -->
+  <g filter="url(#softShadow)">
+    <path d="M156 112 C156 100 166 92 178 92 L296 92 L356 152 L356 392 C356 404 346 414 334 414 L178 414 C166 414 156 404 156 392 Z" fill="url(#paperGrad)" />
+    <!-- Folded Corner -->
+    <path d="M296 92 L296 142 C296 148 300 152 306 152 L356 152 Z" fill="#d1d1d6" />
+  </g>
+
+  <!-- Document Text Lines -->
+  <rect x="192" y="184" width="128" height="10" rx="5" fill="#8e8e93" />
+  <rect x="192" y="214" width="100" height="10" rx="5" fill="#aeaeb2" />
+  <rect x="192" y="244" width="128" height="10" rx="5" fill="#aeaeb2" />
+  <rect x="192" y="274" width="80" height="10" rx="5" fill="#aeaeb2" />
+  <rect x="192" y="304" width="112" height="10" rx="5" fill="#aeaeb2" />
+
+  <!-- Laser Scanner Ray -->
+  <g filter="url(#laserGlow)">
+    <rect x="110" y="250" width="292" height="4" rx="2" fill="url(#beamGrad)" />
+  </g>
+
+  <!-- Scanner Corner Brackets (Apple Camera Style) -->
+  <!-- Top Left -->
+  <path d="M 120 160 L 120 130 C 120 125 125 120 130 120 L 160 120" stroke="#007aff" stroke-width="7" stroke-linecap="round" fill="none" />
+  <!-- Top Right -->
+  <path d="M 352 120 L 382 120 C 387 120 392 125 392 130 L 392 160" stroke="#007aff" stroke-width="7" stroke-linecap="round" fill="none" />
+  <!-- Bottom Right -->
+  <path d="M 392 352 L 392 382 C 392 387 387 392 382 392 L 352 392" stroke="#007aff" stroke-width="7" stroke-linecap="round" fill="none" />
+  <!-- Bottom Left -->
+  <path d="M 160 392 L 130 392 C 125 392 120 387 120 382 L 120 352" stroke="#007aff" stroke-width="7" stroke-linecap="round" fill="none" />
+</svg>

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#000000" />
+  
+  <!-- SEO & Brand Metadata -->
+  <title>ApexDoc Scanner — Minimal Apple-Style Document & PDF Scanner</title>
+  <meta name="description" content="Mobile-first, 100% client-side document scanner and PDF maker with an elegant Apple aesthetic. Zero cloud uploads, works offline." />
+  
+  <!-- Apple Mobile Web App Settings -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="ApexDoc" />
+  <link rel="apple-touch-icon" href="./favicon.svg" />
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="./manifest.webmanifest" />
+
+  <!-- Preconnect Google Fonts for Inter Fallback -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="app">
+    <!-- Top Navigation Header -->
+    <header class="app-header" id="appHeader">
+      <div class="brand-group">
+        <div class="brand-icon">
+          <img src="./favicon.svg" alt="ApexDoc Logo" />
+        </div>
+        <span class="brand-title">ApexDoc</span>
+      </div>
+
+      <div class="header-center" id="headerCenter" style="display: none;">
+        <div class="page-counter-pill" id="pageCounterPill">
+          <span id="pageCounterText">Page 1 of 1</span>
+        </div>
+      </div>
+
+      <div class="header-actions" id="headerActions" style="display: none;">
+        <!-- Rotate Page Clockwise -->
+        <button class="btn-icon" id="btnRotatePage" title="Rotate 90°" aria-label="Rotate Page">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+          </svg>
+        </button>
+        <!-- Retake / Adjust Crop -->
+        <button class="btn-icon" id="btnAdjustCrop" title="Adjust Edges" aria-label="Adjust Edges">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 2v14a2 2 0 0 0 2 2h14M18 22V8a2 2 0 0 0-2-2H2"/>
+          </svg>
+        </button>
+        <!-- Delete Active Page -->
+        <button class="btn-icon danger" id="btnDeletePage" title="Delete Page" aria-label="Delete Page">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content Stage -->
+    <main class="main-stage" id="mainStage">
+      <!-- Empty Hero State -->
+      <section class="empty-state" id="emptyState">
+        <div class="empty-icon-wrapper">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+            <circle cx="12" cy="13" r="4"></circle>
+          </svg>
+        </div>
+        <h1 class="empty-title">Scan Documents</h1>
+        <p class="empty-subtitle">Capture receipts, contracts, IDs, or notes. Perfectly straightened into professional multi-page PDFs.</p>
+        
+        <div class="cta-button-group">
+          <!-- Primary: Open Native Camera -->
+          <button class="btn-primary" id="btnSnapCamera">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+              <circle cx="12" cy="13" r="4"></circle>
+            </svg>
+            <span>Scan with Camera</span>
+          </button>
+          
+          <!-- Secondary: Choose from Photos / Gallery -->
+          <button class="btn-secondary" id="btnUploadGallery">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <circle cx="8.5" cy="8.5" r="1.5"></circle>
+              <polyline points="21 15 16 10 5 21"></polyline>
+            </svg>
+            <span>Upload from Photos</span>
+          </button>
+
+          <!-- Quick Demo Sample Button -->
+          <button class="btn-text" id="btnTrySample" style="font-size: 13px; color: var(--color-accent); align-self: center; padding: 4px 8px;">
+            ✦ Try with sample document
+          </button>
+        </div>
+
+        <div class="feature-badges">
+          <span class="badge"><span class="badge-dot"></span>100% Private</span>
+          <span class="badge"><span class="badge-dot"></span>Works Offline</span>
+          <span class="badge"><span class="badge-dot"></span>No Ads or Sign Up</span>
+        </div>
+      </section>
+
+      <!-- Active Document Canvas Viewport -->
+      <section class="document-viewer-container" id="documentViewer" style="display: none;">
+        <div class="scanned-canvas-wrapper" id="canvasWrapper">
+          <!-- Rendered actively via JS -->
+        </div>
+      </section>
+    </main>
+
+    <!-- Multi-Page Thumbnail Reel Strip -->
+    <div class="pages-carousel-strip" id="pagesCarouselStrip" style="display: none;">
+      <!-- Dynamic thumbnail cards injected here -->
+    </div>
+
+    <!-- Bottom Apple Action Dock -->
+    <footer class="bottom-dock" id="bottomDock" style="display: none;">
+      <!-- Filter Segmented Control -->
+      <div class="filter-segmented-pill" id="filterSegmentedPill">
+        <button class="filter-tab active" data-filter="bw">B&amp;W Clean</button>
+        <button class="filter-tab" data-filter="magic">Magic Color</button>
+        <button class="filter-tab" data-filter="grayscale">Grayscale</button>
+        <button class="filter-tab" data-filter="original">Original</button>
+      </div>
+
+      <!-- Action Button (Export) -->
+      <div class="dock-actions">
+        <button class="btn-dock-export" id="btnOpenExport">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
+            <polyline points="16 6 12 2 8 6"></polyline>
+            <line x1="12" y1="2" x2="12" y2="15"></line>
+          </svg>
+          <span>Export PDF</span>
+        </button>
+      </div>
+    </footer>
+
+    <!-- Interactive Perspective Crop Overlay Root -->
+    <div id="cropEditorRoot" style="display: none;"></div>
+
+    <!-- Export Bottom Sheet Root -->
+    <div id="exportSheetRoot"></div>
+
+    <!-- Hidden Native Mobile File Inputs -->
+    <input type="file" id="cameraInput" class="hidden-file-input" accept="image/*" capture="environment" />
+    <input type="file" id="galleryInput" class="hidden-file-input" accept="image/*" multiple />
+
+    <!-- Global Processing Spinner Overlay -->
+    <div class="processing-overlay" id="processingOverlay" style="display: none;">
+      <div class="apple-spinner"></div>
+      <div class="processing-text" id="processingText">Processing...</div>
+    </div>
+  </div>
+
+  <!-- Entry Script -->
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

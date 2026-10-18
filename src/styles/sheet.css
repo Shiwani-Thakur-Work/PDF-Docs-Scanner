@@ -1,0 +1,210 @@
+/**
+ * sheet.css
+ * 
+ * Apple iOS Slide-Up Modal Sheet & Toast Pill Notifications.
+ */
+
+/* Backdrop overlay */
+.sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 80;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition-normal);
+}
+
+.sheet-backdrop.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* iOS Bottom Sheet Container */
+.bottom-sheet {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 90;
+  background: var(--glass-bg-sheet);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-top: 0.5px solid var(--glass-border);
+  border-top-left-radius: var(--radius-xl);
+  border-top-right-radius: var(--radius-xl);
+  padding: 12px 20px calc(var(--safe-bottom) + 24px) 20px;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.7);
+  transform: translateY(100%);
+  transition: transform 0.36s var(--ease-apple-spring);
+  max-width: 540px;
+  margin: 0 auto;
+}
+
+.sheet-backdrop.active .bottom-sheet {
+  transform: translateY(0);
+}
+
+/* Grab handle bar */
+.sheet-handle {
+  width: 38px;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.3);
+  margin: 0 auto 16px auto;
+  cursor: grab;
+}
+
+.sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.sheet-title {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  color: #ffffff;
+}
+
+.sheet-close-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.sheet-close-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Sheet Form Fields */
+.sheet-section {
+  margin-bottom: 18px;
+}
+
+.sheet-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-tertiary);
+  margin-bottom: 8px;
+}
+
+.sheet-input {
+  width: 100%;
+  height: 44px;
+  padding: 0 14px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.08);
+  border: 0.5px solid var(--glass-border);
+  color: #ffffff;
+  font-family: var(--font-family-system);
+  font-size: 15px;
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.sheet-input:focus {
+  border-color: var(--color-accent);
+}
+
+/* Apple Segmented Control for Options */
+.segmented-control {
+  display: flex;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: var(--radius-md);
+  padding: 3px;
+  border: 0.5px solid var(--glass-border-subtle);
+}
+
+.segmented-option {
+  flex: 1;
+  text-align: center;
+  padding: 8px 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  border-radius: 11px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.segmented-option.active {
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+.sheet-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+/* ==========================================================================
+   Apple-Style Toast Notifications
+   ========================================================================== */
+.toast-container {
+  position: absolute;
+  top: calc(var(--safe-top) + 64px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.toast-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
+  background: rgba(28, 28, 30, 0.92);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 0.5px solid var(--glass-border);
+  box-shadow: var(--shadow-md);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 500;
+  animation: toastIn 0.35s var(--ease-apple-spring);
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(-12px) scale(0.92); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.toast-icon {
+  display: inline-flex;
+}
+
+.toast-icon.success {
+  color: var(--color-success);
+}
+
+.toast-icon.info {
+  color: var(--color-accent);
+}
