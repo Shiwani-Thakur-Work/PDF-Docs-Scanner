@@ -2,18 +2,21 @@
 
 Welcome! If you are not a software engineer, this document explains in simple, plain English exactly what this tool is, how it works, and why it is special.
 
+> [!IMPORTANT]
+> **No iPhone Required!** ApexDoc Scanner works on **any phone or computer** (Android, Windows, Mac, Chromebook, iPhone, iPad) in any standard browser (Chrome, Edge, Firefox, Safari, Brave). We use "Apple-style" solely to describe the clean, frosted-glass minimalist design and smooth tactile feel.
+
 ---
 
 ## 1. What is this tool?
-**ApexDoc Scanner** is a website you open on your phone (or computer) that acts just like the native document scanner built into an iPhone.
+**ApexDoc Scanner** is a website you open on your phone or computer that provides the experience of a high-end document scanner with zero installations.
 
 You can:
-1. Snap photos of documents, receipts, or notes with your phone camera.
+1. Snap photos of documents, receipts, or notes with your phone camera (or upload from gallery/desktop).
 2. Adjust the 4 corners of the paper with your finger (with a round magnifying glass so your thumb doesn't get in the way).
 3. Watch the app automatically straighten the document (even if you took the photo at an angle or on a messy desk).
 4. Apply professional filters that magically remove shadows, wrinkles, and dim room lighting, turning grey paper into crisp, laser-printer-quality black-and-white.
 5. Combine multiple pages into a single PDF document.
-6. Share the PDF directly via WhatsApp, AirDrop, Apple "Save to Files", or download it instantly.
+6. Share the PDF directly via WhatsApp, Android Share, Google Drive, AirDrop, Save to Files, or instant download.
 
 ---
 
