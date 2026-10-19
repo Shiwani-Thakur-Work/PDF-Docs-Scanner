@@ -106,8 +106,8 @@ async function processIncomingFiles(files) {
       // 3. Perform high-performance homography warp
       const warpedCanvas = warpPerspective(img, corners);
 
-      // 4. Apply clean document thresholding (default 'bw')
-      const processedCanvas = processCanvasWithFilter(warpedCanvas, 'bw');
+      // 4. Apply smooth photo filter by default (natural, pristine real photo clicks)
+      const processedCanvas = processCanvasWithFilter(warpedCanvas, 'photo');
 
       // 5. Generate high-resolution thumbnail for carousel
       const thumbUrl = createThumbnailUrl(processedCanvas);
@@ -118,7 +118,7 @@ async function processIncomingFiles(files) {
         originalImage: img,
         quadPoints: corners,
         rotation: 0,
-        activeFilter: 'bw',
+        activeFilter: 'photo',
         warpedCanvas: warpedCanvas,
         processedCanvas: processedCanvas,
         thumbnailUrl: thumbUrl
@@ -180,7 +180,7 @@ function syncUIWithState() {
   elPageCounterText.textContent = `Page ${currentPageIndex + 1} of ${pages.length}`;
 
   // 4. Update Filter Tabs selection to match active page
-  const activeFilter = currentPage ? currentPage.activeFilter : 'bw';
+  const activeFilter = currentPage ? currentPage.activeFilter : 'photo';
   elFilterTabs.forEach(tab => {
     tab.classList.toggle('active', tab.dataset.filter === activeFilter);
   });

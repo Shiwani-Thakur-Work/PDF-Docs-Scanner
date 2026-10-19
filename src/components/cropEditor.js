@@ -355,8 +355,8 @@ export class CropEditor {
         // 1. Perspective warp original image with adjusted corners
         const warped = warpPerspective(this.imgElement, this.corners);
 
-        // 2. Re-apply active filter (default 'bw' or current)
-        const processed = processCanvasWithFilter(warped, page.activeFilter || 'bw');
+        // 2. Re-apply active filter (default 'photo' or current)
+        const processed = processCanvasWithFilter(warped, page.activeFilter || 'photo');
         const thumbUrl = createThumbnailUrl(processed);
 
         // 3. Update page record

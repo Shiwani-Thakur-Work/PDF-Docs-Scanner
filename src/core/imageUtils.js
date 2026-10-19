@@ -56,22 +56,20 @@ export function rotateCanvas(canvas, degrees) {
 }
 
 /**
- * Estimates initial document quad corners with an Apple-style
- * generous margin inset (8% from edges) ready for user adjustment.
+ * Estimates initial document quad corners.
+ * Defaults to the full pristine image bounds so no headers, footers, or margins
+ * are accidentally clipped on ingestion. Users can adjust corners in Crop mode anytime.
  * 
  * @param {number} width - Image width
  * @param {number} height - Image height
  * @returns {Array<{x: number, y: number}>} [TL, TR, BR, BL]
  */
 export function estimateInitialCorners(width, height) {
-  const insetX = width * 0.08;
-  const insetY = height * 0.08;
-
   return [
-    { x: Math.round(insetX), y: Math.round(insetY) },                      // Top-Left
-    { x: Math.round(width - insetX), y: Math.round(insetY) },              // Top-Right
-    { x: Math.round(width - insetX), y: Math.round(height - insetY) },      // Bottom-Right
-    { x: Math.round(insetX), y: Math.round(height - insetY) }              // Bottom-Left
+    { x: 0, y: 0 },                  // Top-Left
+    { x: width, y: 0 },              // Top-Right
+    { x: width, y: height },         // Bottom-Right
+    { x: 0, y: height }              // Bottom-Left
   ];
 }
 

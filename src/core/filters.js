@@ -4,10 +4,10 @@
  * Professional Client-Side Document Scanner Image Filters.
  * 
  * Features:
- * 1. B&W Document (Adaptive Local Window Thresholding - shadow/wrinkle killer)
- * 2. Magic Color (Background equalization + saturation boost for colored stamps/logos)
- * 3. High-Contrast Grayscale (Levels optimization for forms and receipts)
- * 4. Original Photo (Natural color preservation)
+ * 1. Photo (Smooth Real Photo Click - Natural color preservation with subtle clarity)
+ * 2. Magic Color (Background shadow flattening + vibrant colors + smooth anti-aliased text)
+ * 3. Smooth Grayscale (Continuous-tone monochrome with clean paper and anti-aliased font edges)
+ * 4. B&W Document (Clean high-contrast document with subpixel anti-aliasing, no harsh xerox pixelation)
  */
 
 /**
@@ -48,21 +48,64 @@ function buildIntegralImage(data, width, height) {
 }
 
 /**
- * Filter 1: B&W Clean Document (Adaptive Thresholding)
- * Eliminates hand shadows, dark room gradients, and paper folds.
- * Produces crisp, laser-sharp black ink on pure white background.
+ * Estimates overall paper brightness from the upper quartile of the image.
+ */
+function estimatePaperBrightness(gray, numPixels) {
+  const step = Math.max(1, Math.floor(numPixels / 600));
+  let sampleSum = 0;
+  let count = 0;
+  for (let i = 0; i < numPixels; i += step) {
+    if (gray[i] > 120) {
+      sampleSum += gray[i];
+      count++;
+    }
+  }
+  return count > 0 ? (sampleSum / count) : 210;
+}
+
+// Pre-computed lookup table for Magic Color smooth S-curve
+const MAGIC_LUT = new Uint8Array(256);
+for (let i = 0; i < 256; i++) {
+  const v = i / 255;
+  let out;
+  if (v > 0.80) {
+    const t = (v - 0.80) / 0.20;
+    out = 0.80 + t * 0.20 + 0.03 * Math.sin(t * Math.PI);
+  } else {
+    out = Math.pow(v, 1.15) * (0.80 / Math.pow(0.80, 1.15));
+  }
+  MAGIC_LUT[i] = Math.max(0, Math.min(255, Math.round(out * 255)));
+}
+
+// Pre-computed lookup table for Grayscale smooth S-curve
+const GRAY_LUT = new Uint8Array(256);
+for (let i = 0; i < 256; i++) {
+  const v = i / 255;
+  let out;
+  if (v > 0.82) {
+    const t = (v - 0.82) / 0.18;
+    out = 0.82 + t * 0.18 + 0.04 * Math.sin(t * Math.PI);
+  } else {
+    out = Math.pow(v, 1.20) * (0.82 / Math.pow(0.82, 1.20));
+  }
+  GRAY_LUT[i] = Math.max(0, Math.min(255, Math.round(out * 255)));
+}
+
+/**
+ * Filter 1: B&W Clean Document (Adaptive Thresholding with Soft Anti-Aliasing)
+ * Produces crisp, laser-sharp black ink on pure white paper without
+ * harsh 1-bit pixelation or xerox photocopy noise.
  * 
  * @param {ImageData} imageData 
- * @param {number} [windowFraction=0.04] - Size of neighborhood window relative to width
- * @param {number} [percentageThreshold=0.12] - Sensitivity threshold (12% darker than local mean)
+ * @param {number} [windowFraction=0.06] - Neighborhood window size
+ * @param {number} [percentageThreshold=0.10] - Threshold sensitivity
  * @returns {ImageData}
  */
-export function applyBwFilter(imageData, windowFraction = 0.04, percentageThreshold = 0.12) {
+export function applyBwFilter(imageData, windowFraction = 0.06, percentageThreshold = 0.10) {
   const { width, height, data } = imageData;
   const { gray, integral } = buildIntegralImage(data, width, height);
 
-  // Dynamic window size based on document resolution
-  const S = Math.max(12, Math.round(width * windowFraction));
+  const S = Math.max(16, Math.round(width * windowFraction));
   const s2 = Math.floor(S / 2);
   const stride = width + 1;
 
@@ -72,24 +115,43 @@ export function applyBwFilter(imageData, windowFraction = 0.04, percentageThresh
     const rowOffset = y * width;
 
     for (let x = 0; x < width; x++) {
+      const pixelVal = gray[rowOffset + x];
+      const p = (rowOffset + x) * 4;
+
+      // Fast path: Pixels already brightly lit are pure paper (white)
+      if (pixelVal > 210) {
+        data[p] = 255;
+        data[p + 1] = 255;
+        data[p + 2] = 255;
+        data[p + 3] = 255;
+        continue;
+      }
+
       const x1 = Math.max(0, x - s2);
       const x2 = Math.min(width, x + s2);
       const count = (x2 - x1) * (y2 - y1);
 
-      // Fast O(1) rectangular sum via integral image
       const sum = integral[y2 * stride + x2]
                 - integral[y1 * stride + x2]
                 - integral[y2 * stride + x1]
                 + integral[y1 * stride + x1];
 
       const localMean = sum / count;
-      const pixelVal = gray[rowOffset + x];
+      const targetThreshold = localMean * (1.0 - percentageThreshold);
 
-      // If pixel is darker than local mean by threshold, it's ink (0 = black); otherwise paper (255 = white)
-      const isInk = pixelVal < localMean * (1.0 - percentageThreshold);
-      const out = isInk ? 0 : 255;
+      // Smooth anti-aliased edge transition band (span of 14 levels)
+      // Prevents harsh 1-bit jagged xerox appearance
+      const diff = pixelVal - targetThreshold;
+      let out;
+      if (diff <= -7) {
+        out = 0; // Pure dark ink core
+      } else if (diff >= 7) {
+        out = 255; // Clean paper
+      } else {
+        // Smooth linear subpixel anti-aliasing
+        out = Math.round(((diff + 7) / 14) * 255);
+      }
 
-      const p = (rowOffset + x) * 4;
       data[p] = out;
       data[p + 1] = out;
       data[p + 2] = out;
@@ -102,17 +164,22 @@ export function applyBwFilter(imageData, windowFraction = 0.04, percentageThresh
 
 /**
  * Filter 2: Magic Color (Document Color Mode)
- * Normalizes uneven background paper illumination while preserving
- * and boosting the vibrancy of stamps, signatures, colored ink, and photos.
+ * Normalizes uneven paper illumination while preserving smooth anti-aliased
+ * typography, colored ink, stamps, signatures, and natural textures.
  * 
  * @param {ImageData} imageData 
  * @returns {ImageData}
  */
 export function applyMagicColorFilter(imageData) {
   const { width, height, data } = imageData;
+  const numPixels = width * height;
   const { gray, integral } = buildIntegralImage(data, width, height);
 
-  const S = Math.max(20, Math.round(width * 0.08));
+  const baselinePaper = estimatePaperBrightness(gray, numPixels);
+  const minLocalPaper = baselinePaper * 0.65;
+
+  // Wide 20% window to capture low-frequency ambient illumination across sheet
+  const S = Math.max(36, Math.round(width * 0.20));
   const s2 = Math.floor(S / 2);
   const stride = width + 1;
 
@@ -131,24 +198,19 @@ export function applyMagicColorFilter(imageData) {
                 - integral[y2 * stride + x1]
                 + integral[y1 * stride + x1];
 
-      // Background illumination estimate
-      const bgLum = Math.max(30, sum / count);
+      // Local background luminance estimate, clamped to avoid crushing dense text
+      const localBg = Math.max(minLocalPaper, sum / count);
+      const gain = Math.min(1.85, 245 / Math.max(120, localBg));
+
       const p = (rowOffset + x) * 4;
+      const r = Math.min(255, Math.round(data[p] * gain));
+      const g = Math.min(255, Math.round(data[p + 1] * gain));
+      const b = Math.min(255, Math.round(data[p + 2] * gain));
 
-      let r = data[p];
-      let g = data[p + 1];
-      let b = data[p + 2];
-
-      // Divide by local background brightness to flatten shadows
-      const scale = 255 / bgLum;
-      r = Math.min(255, Math.pow(r * scale / 255, 1.25) * 255);
-      g = Math.min(255, Math.pow(g * scale / 255, 1.25) * 255);
-      b = Math.min(255, Math.pow(b * scale / 255, 1.25) * 255);
-
-      // Contrast stretching
-      data[p] = Math.max(0, Math.min(255, (r - 128) * 1.35 + 128));
-      data[p + 1] = Math.max(0, Math.min(255, (g - 128) * 1.35 + 128));
-      data[p + 2] = Math.max(0, Math.min(255, (b - 128) * 1.35 + 128));
+      // Apply smooth S-curve LUT: preserves smooth font anti-aliasing and vibrant colors
+      data[p] = MAGIC_LUT[r];
+      data[p + 1] = MAGIC_LUT[g];
+      data[p + 2] = MAGIC_LUT[b];
       data[p + 3] = 255;
     }
   }
@@ -157,8 +219,8 @@ export function applyMagicColorFilter(imageData) {
 }
 
 /**
- * Filter 3: High-Contrast Grayscale
- * Dynamic range stretched monochrome with automatic levels adjustment.
+ * Filter 3: Smooth Grayscale
+ * Dynamic range stretched monochrome with continuous tones and anti-aliased font edges.
  * 
  * @param {ImageData} imageData 
  * @returns {ImageData}
@@ -169,16 +231,37 @@ export function applyGrayscaleFilter(imageData) {
 
   for (let i = 0; i < len; i += 4) {
     const lum = (data[i] * 77 + data[i + 1] * 150 + data[i + 2] * 29) >> 8;
-    // Apply gentle S-curve to boost dark text and whiten background
-    let enhanced = lum;
-    if (lum > 170) {
-      enhanced = Math.min(255, lum + (255 - lum) * 0.45);
-    } else if (lum < 90) {
-      enhanced = Math.max(0, lum * 0.7);
-    }
+    const enhanced = GRAY_LUT[lum];
     data[i] = enhanced;
     data[i + 1] = enhanced;
     data[i + 2] = enhanced;
+    data[i + 3] = 255;
+  }
+
+  return imageData;
+}
+
+/**
+ * Filter 4: Smooth Photo (Real Photo Click)
+ * Delivers clean, true-to-life photographic fidelity with subtle document contrast.
+ * 
+ * @param {ImageData} imageData 
+ * @returns {ImageData}
+ */
+export function applySmoothPhotoFilter(imageData) {
+  // Retains full continuous camera tones with subtle clarity boost
+  const { data } = imageData;
+  const len = data.length;
+
+  for (let i = 0; i < len; i += 4) {
+    // Gentle 4% contrast boost to give real photo clicks crisp readability
+    let r = data[i];
+    let g = data[i + 1];
+    let b = data[i + 2];
+
+    data[i] = Math.max(0, Math.min(255, Math.round((r - 128) * 1.04 + 128)));
+    data[i + 1] = Math.max(0, Math.min(255, Math.round((g - 128) * 1.04 + 128)));
+    data[i + 2] = Math.max(0, Math.min(255, Math.round((b - 128) * 1.04 + 128)));
     data[i + 3] = 255;
   }
 
@@ -190,7 +273,7 @@ export function applyGrayscaleFilter(imageData) {
  * a new processed Canvas element.
  * 
  * @param {HTMLCanvasElement} inputCanvas 
- * @param {'bw' | 'magic' | 'grayscale' | 'original'} filterType 
+ * @param {'photo' | 'original' | 'magic' | 'grayscale' | 'bw'} filterType 
  * @returns {HTMLCanvasElement}
  */
 export function processCanvasWithFilter(inputCanvas, filterType) {
@@ -200,18 +283,21 @@ export function processCanvasWithFilter(inputCanvas, filterType) {
   const ctx = outCanvas.getContext('2d');
   ctx.drawImage(inputCanvas, 0, 0);
 
+  // 'original' or 'photo': returns natural real photo click
   if (filterType === 'original') {
     return outCanvas;
   }
 
   const imgData = ctx.getImageData(0, 0, outCanvas.width, outCanvas.height);
 
-  if (filterType === 'bw') {
-    applyBwFilter(imgData);
+  if (filterType === 'photo') {
+    applySmoothPhotoFilter(imgData);
   } else if (filterType === 'magic') {
     applyMagicColorFilter(imgData);
   } else if (filterType === 'grayscale') {
     applyGrayscaleFilter(imgData);
+  } else if (filterType === 'bw') {
+    applyBwFilter(imgData);
   }
 
   ctx.putImageData(imgData, 0, 0);

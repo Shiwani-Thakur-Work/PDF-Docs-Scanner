@@ -143,20 +143,13 @@ function projectPoint(H, x, y) {
 /**
  * Warps a triangular patch from the source image onto a triangular patch
  * in the destination canvas using hardware-accelerated 2D affine transforms.
+ * Expands vertices slightly outward from the triangle centroid to prevent
+ * subpixel anti-aliasing seam cracks along triangle boundaries.
  */
 function renderTriangle(ctx, sourceImage, p0, p1, p2, u0, u1, u2) {
-  ctx.save();
-  ctx.beginPath();
-  ctx.moveTo(p0.x, p0.y);
-  ctx.lineTo(p1.x, p1.y);
-  ctx.lineTo(p2.x, p2.y);
-  ctx.closePath();
-  ctx.clip();
-
   // Compute 2D affine transform matrix mapping (u0, u1, u2) -> (p0, p1, p2)
   const delta = u0.x * (u1.y - u2.y) + u1.x * (u2.y - u0.y) + u2.x * (u0.y - u1.y);
   if (Math.abs(delta) < 1e-6) {
-    ctx.restore();
     return;
   }
 
@@ -166,6 +159,39 @@ function renderTriangle(ctx, sourceImage, p0, p1, p2, u0, u1, u2) {
   const d = (p0.y * (u2.x - u1.x) + p1.y * (u0.x - u2.x) + p2.y * (u1.x - u0.x)) / delta;
   const e = (p0.x * (u1.x * u2.y - u2.x * u1.y) + p1.x * (u2.x * u0.y - u0.x * u2.y) + p2.x * (u0.x * u1.y - u1.x * u0.y)) / delta;
   const f = (p0.y * (u1.x * u2.y - u2.x * u1.y) + p1.y * (u2.x * u0.y - u0.x * u2.y) + p2.y * (u0.x * u1.y - u1.x * u0.y)) / delta;
+
+  ctx.save();
+  ctx.beginPath();
+
+  // Dilate triangle clipping boundaries outward by 0.75px around centroid
+  // to ensure smooth overlap and eliminate any visible hairline seams
+  const cx = (p0.x + p1.x + p2.x) / 3;
+  const cy = (p0.y + p1.y + p2.y) / 3;
+  const pad = 0.75;
+
+  const dx0 = p0.x - cx;
+  const dy0 = p0.y - cy;
+  const dist0 = Math.hypot(dx0, dy0) || 1;
+  const ep0x = p0.x + (dx0 / dist0) * pad;
+  const ep0y = p0.y + (dy0 / dist0) * pad;
+
+  const dx1 = p1.x - cx;
+  const dy1 = p1.y - cy;
+  const dist1 = Math.hypot(dx1, dy1) || 1;
+  const ep1x = p1.x + (dx1 / dist1) * pad;
+  const ep1y = p1.y + (dy1 / dist1) * pad;
+
+  const dx2 = p2.x - cx;
+  const dy2 = p2.y - cy;
+  const dist2 = Math.hypot(dx2, dy2) || 1;
+  const ep2x = p2.x + (dx2 / dist2) * pad;
+  const ep2y = p2.y + (dy2 / dist2) * pad;
+
+  ctx.moveTo(ep0x, ep0y);
+  ctx.lineTo(ep1x, ep1y);
+  ctx.lineTo(ep2x, ep2y);
+  ctx.closePath();
+  ctx.clip();
 
   ctx.transform(a, b, c, d, e, f);
   ctx.drawImage(sourceImage, 0, 0);
@@ -182,6 +208,19 @@ function renderTriangle(ctx, sourceImage, p0, p1, p2, u0, u1, u2) {
  * @returns {HTMLCanvasElement} Destination canvas with upright, straightened document
  */
 export function warpPerspective(sourceImage, corners, targetWidth, targetHeight) {
+  const srcW = sourceImage.naturalWidth || sourceImage.width;
+  const srcH = sourceImage.naturalHeight || sourceImage.height;
+
+  // Direct fast path: If corners represent the full uncropped image bounds,
+  // render directly to avoid unnecessary homography mesh processing.
+  const tol = 3;
+  const isDirect = (
+    Math.abs(corners[0].x) <= tol && Math.abs(corners[0].y) <= tol &&
+    Math.abs(corners[1].x - srcW) <= tol && Math.abs(corners[1].y) <= tol &&
+    Math.abs(corners[2].x - srcW) <= tol && Math.abs(corners[2].y - srcH) <= tol &&
+    Math.abs(corners[3].x) <= tol && Math.abs(corners[3].y - srcH) <= tol
+  );
+
   const dims = (targetWidth && targetHeight) 
     ? { width: targetWidth, height: targetHeight } 
     : calculateOutputDimensions(corners);
@@ -190,6 +229,15 @@ export function warpPerspective(sourceImage, corners, targetWidth, targetHeight)
   outCanvas.width = dims.width;
   outCanvas.height = dims.height;
   const ctx = outCanvas.getContext('2d', { alpha: false, desynchronized: true });
+
+  if (isDirect) {
+    ctx.drawImage(sourceImage, 0, 0, dims.width, dims.height);
+    return outCanvas;
+  }
+
+  // Pre-fill destination canvas with clean white background
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, dims.width, dims.height);
 
   const dstCorners = [
     { x: 0, y: 0 },
@@ -202,7 +250,6 @@ export function warpPerspective(sourceImage, corners, targetWidth, targetHeight)
   const H = getHomographyMatrix(corners, dstCorners);
 
   // Grid subdivision level: 16x16 grid yields 512 smooth triangles
-  // This provides mathematically flawless perspective with zero curvature distortion
   const subdivisions = 16;
   const cellW = dims.width / subdivisions;
   const cellH = dims.height / subdivisions;
@@ -222,7 +269,7 @@ export function warpPerspective(sourceImage, corners, targetWidth, targetHeight)
     }
   }
 
-  // Render each quad as two affine triangles
+  // Render each quad as two affine triangles with dilated seam protection
   for (let gy = 0; gy < subdivisions; gy++) {
     for (let gx = 0; gx < subdivisions; gx++) {
       const p00 = gridDst[gy][gx];
