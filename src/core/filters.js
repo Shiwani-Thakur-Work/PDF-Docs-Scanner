@@ -91,6 +91,18 @@ for (let i = 0; i < 256; i++) {
   GRAY_LUT[i] = Math.max(0, Math.min(255, Math.round(out * 255)));
 }
 
+// Pre-computed Photo S-curve LUT for gentle, natural contrast enhancement.
+// Creates a smooth sigmoid that lifts shadows without clipping highlights.
+const PHOTO_LUT = new Uint8Array(256);
+for (let i = 0; i < 256; i++) {
+  const v = i / 255;
+  // Soft sigmoid contrast: lifts dark tones, compresses near-white gently
+  const contrast = 1.0 / (1.0 + Math.exp(-7.5 * (v - 0.45)));
+  // Blend 60% sigmoid with 40% linear for natural feel
+  const blended = 0.60 * contrast + 0.40 * v;
+  PHOTO_LUT[i] = Math.max(0, Math.min(255, Math.round(blended * 255)));
+}
+
 /**
  * Filter 1: B&W Clean Document (Adaptive Thresholding with Soft Anti-Aliasing)
  * Produces crisp, laser-sharp black ink on pure white paper without
@@ -242,30 +254,151 @@ export function applyGrayscaleFilter(imageData) {
 }
 
 /**
- * Filter 4: Smooth Photo (Real Photo Click)
- * Delivers clean, true-to-life photographic fidelity with subtle document contrast.
+ * Filter 4: Smooth Photo (Professional Photo Scanner)
+ * 
+ * Delivers professional scanner-quality results like CamScanner / Adobe Scan / MS Lens.
+ * This is NOT just a contrast bump — it performs:
+ *   1. Local luminance normalization (flattens shadows & uneven lighting)
+ *   2. Auto white-balance via per-channel gain correction
+ *   3. Gentle photo-natural S-curve contrast via LUT
+ *   4. Subtle saturation boost for vivid, life-like colors
+ *   5. Lightweight unsharp-mask sharpening for crisp text & edges
+ * 
+ * The result preserves full color fidelity while making the document
+ * look clean, bright, and professionally scanned.
  * 
  * @param {ImageData} imageData 
  * @returns {ImageData}
  */
 export function applySmoothPhotoFilter(imageData) {
-  // Retains full continuous camera tones with subtle clarity boost
-  const { data } = imageData;
-  const len = data.length;
+  const { width, height, data } = imageData;
+  const numPixels = width * height;
 
-  for (let i = 0; i < len; i += 4) {
-    // Gentle 4% contrast boost to give real photo clicks crisp readability
-    let r = data[i];
-    let g = data[i + 1];
-    let b = data[i + 2];
+  // ── Step 1: Build grayscale + integral image for local background estimation ──
+  const { gray, integral } = buildIntegralImage(data, width, height);
+  const baselinePaper = estimatePaperBrightness(gray, numPixels);
 
-    data[i] = Math.max(0, Math.min(255, Math.round((r - 128) * 1.04 + 128)));
-    data[i + 1] = Math.max(0, Math.min(255, Math.round((g - 128) * 1.04 + 128)));
-    data[i + 2] = Math.max(0, Math.min(255, Math.round((b - 128) * 1.04 + 128)));
-    data[i + 3] = 255;
+  // ── Step 2: Estimate per-channel white-balance gains from bright paper samples ──
+  // Sample bright pixels to determine the paper's actual color temperature
+  const step = Math.max(1, Math.floor(numPixels / 800));
+  let rSum = 0, gSum = 0, bSum = 0, wbCount = 0;
+  for (let i = 0; i < numPixels; i += step) {
+    if (gray[i] > 180) {
+      const p = i * 4;
+      rSum += data[p];
+      gSum += data[p + 1];
+      bSum += data[p + 2];
+      wbCount++;
+    }
   }
 
+  // Per-channel gains to neutralize paper color cast (normalize to ~245 target white)
+  let rGain = 1.0, gGain = 1.0, bGain = 1.0;
+  if (wbCount > 10) {
+    const rAvg = rSum / wbCount;
+    const gAvg = gSum / wbCount;
+    const bAvg = bSum / wbCount;
+    const targetWhite = 245;
+    rGain = Math.min(1.6, targetWhite / Math.max(100, rAvg));
+    gGain = Math.min(1.6, targetWhite / Math.max(100, gAvg));
+    bGain = Math.min(1.6, targetWhite / Math.max(100, bAvg));
+  }
+
+  // ── Step 3: Local luminance normalization + white-balance + S-curve + saturation ──
+  // Use a wide 15% window to flatten ambient shadow gradients
+  const S = Math.max(32, Math.round(width * 0.15));
+  const s2 = Math.floor(S / 2);
+  const stride = width + 1;
+  const minLocalPaper = baselinePaper * 0.55;
+
+  for (let y = 0; y < height; y++) {
+    const y1 = Math.max(0, y - s2);
+    const y2 = Math.min(height, y + s2);
+    const rowOffset = y * width;
+
+    for (let x = 0; x < width; x++) {
+      const x1 = Math.max(0, x - s2);
+      const x2 = Math.min(width, x + s2);
+      const count = (x2 - x1) * (y2 - y1);
+
+      const sum = integral[y2 * stride + x2]
+                - integral[y1 * stride + x2]
+                - integral[y2 * stride + x1]
+                + integral[y1 * stride + x1];
+
+      // Local background luminance, clamped to protect dense ink regions
+      const localBg = Math.max(minLocalPaper, sum / count);
+
+      // Gentle gain to lift shadows toward even brightness
+      // Uses softer gain (max 1.45) than Magic Color to preserve natural photo look
+      const gain = Math.min(1.45, 240 / Math.max(130, localBg));
+
+      const p = (rowOffset + x) * 4;
+
+      // Apply white-balance and local luminance normalization
+      let r = Math.min(255, Math.round(data[p] * gain * rGain));
+      let g = Math.min(255, Math.round(data[p + 1] * gain * gGain));
+      let b = Math.min(255, Math.round(data[p + 2] * gain * bGain));
+
+      // Apply natural S-curve contrast via LUT
+      r = PHOTO_LUT[r];
+      g = PHOTO_LUT[g];
+      b = PHOTO_LUT[b];
+
+      // Subtle saturation boost (1.15x) for vivid, life-like colors
+      // Convert to HSL-like luminance, then push channels away from gray
+      const lum = (r * 77 + g * 150 + b * 29) >> 8;
+      const satBoost = 1.15;
+      r = Math.max(0, Math.min(255, Math.round(lum + (r - lum) * satBoost)));
+      g = Math.max(0, Math.min(255, Math.round(lum + (g - lum) * satBoost)));
+      b = Math.max(0, Math.min(255, Math.round(lum + (b - lum) * satBoost)));
+
+      data[p] = r;
+      data[p + 1] = g;
+      data[p + 2] = b;
+      data[p + 3] = 255;
+    }
+  }
+
+  // ── Step 4: Lightweight unsharp mask for crisp text edges ──
+  // Apply a simple 3x3 sharpen pass with gentle intensity
+  applyUnsharpMask(data, width, height, 0.35);
+
   return imageData;
+}
+
+/**
+ * Applies a lightweight 3x3 unsharp mask (sharpen) to pixel data.
+ * Enhances text edges and fine details without introducing harsh artifacts.
+ * 
+ * @param {Uint8ClampedArray} data - RGBA pixel buffer (modified in-place)
+ * @param {number} width 
+ * @param {number} height 
+ * @param {number} [amount=0.35] - Sharpening strength (0 = none, 1 = full)
+ */
+function applyUnsharpMask(data, width, height, amount = 0.35) {
+  // Create a copy of the current pixel data for neighbor sampling
+  const copy = new Uint8ClampedArray(data);
+
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1; x < width - 1; x++) {
+      const p = (y * width + x) * 4;
+
+      for (let c = 0; c < 3; c++) {
+        // 3x3 box blur sample (average of 8 neighbors + center)
+        const idx = p + c;
+        const blur = (
+          copy[idx - width * 4 - 4] + copy[idx - width * 4] + copy[idx - width * 4 + 4] +
+          copy[idx - 4]             + copy[idx]              + copy[idx + 4] +
+          copy[idx + width * 4 - 4] + copy[idx + width * 4]  + copy[idx + width * 4 + 4]
+        ) / 9;
+
+        // Unsharp mask: original + amount * (original - blur)
+        const sharp = copy[idx] + amount * (copy[idx] - blur);
+        data[idx] = Math.max(0, Math.min(255, Math.round(sharp)));
+      }
+    }
+  }
 }
 
 /**
@@ -280,10 +413,19 @@ export function processCanvasWithFilter(inputCanvas, filterType) {
   const outCanvas = document.createElement('canvas');
   outCanvas.width = inputCanvas.width;
   outCanvas.height = inputCanvas.height;
-  const ctx = outCanvas.getContext('2d');
+
+  // Use willReadFrequently for filters that do pixel manipulation,
+  // and set high-quality image smoothing for best color fidelity
+  const needsPixelWork = filterType !== 'original';
+  const ctx = outCanvas.getContext('2d', {
+    willReadFrequently: needsPixelWork,
+    alpha: false
+  });
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(inputCanvas, 0, 0);
 
-  // 'original' or 'photo': returns natural real photo click
+  // 'original': returns the raw camera capture with zero processing
   if (filterType === 'original') {
     return outCanvas;
   }

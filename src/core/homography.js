@@ -45,8 +45,8 @@ export function calculateOutputDimensions(corners) {
   const rightHeight = getDistance(tr, br);
   const maxHeight = Math.max(leftHeight, rightHeight);
 
-  // Clamp to reasonable max resolution for mobile performance (e.g., max 2400px)
-  const maxDim = 2400;
+  // Clamp to reasonable max resolution for mobile performance (max 4096px)
+  const maxDim = 4096;
   let finalWidth = Math.round(maxWidth);
   let finalHeight = Math.round(maxHeight);
 
@@ -228,7 +228,9 @@ export function warpPerspective(sourceImage, corners, targetWidth, targetHeight)
   const outCanvas = document.createElement('canvas');
   outCanvas.width = dims.width;
   outCanvas.height = dims.height;
-  const ctx = outCanvas.getContext('2d', { alpha: false, desynchronized: true });
+  const ctx = outCanvas.getContext('2d', { alpha: false });
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
 
   if (isDirect) {
     ctx.drawImage(sourceImage, 0, 0, dims.width, dims.height);
